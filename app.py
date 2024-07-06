@@ -2,9 +2,12 @@ import streamlit as st
 import anthropic
 import os
 from policyengine_us import Simulation
+import networkx as nx
+import matplotlib.pyplot as plt
 
 # Set up the Anthropic client
 client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
+CLAUDE_MODEL = "claude-3-5-sonnet-20240620"
 
 
 def get_explanation(variable, value, computation_log):
@@ -25,7 +28,7 @@ def get_explanation(variable, value, computation_log):
 
     try:
         response = client.messages.create(
-            model="claude-3-5-sonnet-20240620",
+            model=CLAUDE_MODEL,
             max_tokens=1000,
             temperature=0,
             messages=[{"role": "user", "content": prompt}],
@@ -35,6 +38,53 @@ def get_explanation(variable, value, computation_log):
         return f"Failed to get explanation: {str(e)}"
 
 
+def create_computation_graph(log_lines, max_depth=4):
+    G = nx.DiGraph()
+    current_depth = 0
+    parent_stack = ["root"]
+
+    for line in log_lines:
+        if line.startswith(" " * (current_depth * 2)):
+            # Same level
+            pass
+        elif line.startswith(" " * ((current_depth + 1) * 2)):
+            # Go deeper
+            if current_depth < max_depth:
+                current_depth += 1
+                parent_stack.append(parent_stack[-1])
+        else:
+            # Go back up
+            while (
+                not line.startswith(" " * (current_depth * 2))
+                and current_depth > 0
+            ):
+                current_depth -= 1
+                parent_stack.pop()
+
+        if current_depth <= max_depth:
+            node_name = line.strip().split("=")[0].strip()
+            G.add_edge(parent_stack[-1], node_name)
+            parent_stack[-1] = node_name
+
+    return G
+
+
+def plot_computation_graph(G):
+    plt.figure(figsize=(12, 8))
+    pos = nx.spring_layout(G)
+    nx.draw(
+        G,
+        pos,
+        with_labels=True,
+        node_color="lightblue",
+        node_size=3000,
+        font_size=8,
+        font_weight="bold",
+    )
+    plt.title("Computation Graph")
+    return plt
+
+
 # Streamlit UI
 st.title("Policy Interpreter")
 
@@ -42,8 +92,9 @@ st.title("Policy Interpreter")
 age = st.number_input("Your age", min_value=0, max_value=120, value=40)
 income = st.number_input("Your employment income", min_value=0, value=20000)
 married = st.checkbox("Are you married?")
+DEFAULT_CHILD_AGE = 5
 num_children = st.number_input(
-    "Number of children", min_value=0, max_value=10, value=2
+    "Number of children (assumed age 5)", min_value=0, max_value=10, value=2
 )
 state = st.selectbox(
     "State", ["CA", "NY", "TX", "FL", "IL"]
@@ -51,14 +102,15 @@ state = st.selectbox(
 variable = st.text_input(
     "Variable to analyze (e.g., snap, eitc)", value="snap"
 )
+period = st.text_input("Period (e.g., 2024, 2024-01)", value="2024")
 
 if st.button("Calculate and Explain"):
     # Create the situation dictionary
     situation = {
         "people": {
             "you": {
-                "age": {"2023": age},
-                "employment_income": {"2023": income},
+                "age": {period: age},
+                "employment_income": {period: income},
             }
         },
         "families": {"your family": {"members": ["you"]}},
@@ -67,7 +119,7 @@ if st.button("Calculate and Explain"):
         "households": {
             "your household": {
                 "members": ["you"],
-                "state_name": {"2023": state},
+                "state_name": {period: state},
             }
         },
     }
@@ -83,8 +135,8 @@ if st.button("Calculate and Explain"):
     # Add spouse if married
     if married:
         situation["people"]["spouse"] = {
-            "age": {"2023": age},
-            "employment_income": {"2023": 0},
+            "age": {period: age},
+            "employment_income": {period: 0},
         }
         for unit, unit_name in unit_names.items():
             situation[unit][unit_name]["members"].append("spouse")
@@ -93,8 +145,8 @@ if st.button("Calculate and Explain"):
     for i in range(num_children):
         child_name = f"child_{i+1}"
         situation["people"][child_name] = {
-            "age": {"2023": 5},
-            "employment_income": {"2023": 0},
+            "age": {period: DEFAULT_CHILD_AGE},
+            "employment_income": {period: 0},
         }
         for unit, unit_name in unit_names.items():
             if unit != "marital_units":  # Don't add children to marital units
@@ -103,11 +155,11 @@ if st.button("Calculate and Explain"):
     # Run simulation
     simulation = Simulation(situation=situation)
     simulation.trace = True
-    result = simulation.calculate(variable, 2023)
+    result = simulation.calculate(variable, period)
 
     # Get computation log
     log = simulation.tracer.computation_log
-    log_lines = log.lines(aggregate=False, max_depth=None)
+    log_lines = log.lines(aggregate=False, max_depth=4)
     log_str = "\n".join(log_lines)
 
     # Get explanation from Claude
@@ -118,6 +170,11 @@ if st.button("Calculate and Explain"):
 
     st.subheader("Explanation")
     st.write(explanation)
+
+    st.subheader("Computation Graph")
+    G = create_computation_graph(log_lines)
+    fig = plot_computation_graph(G)
+    st.pyplot(fig)
 
     st.subheader("Computation Log")
     st.text(log_str)
