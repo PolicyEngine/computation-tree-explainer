@@ -89,7 +89,10 @@ def plot_computation_graph(G):
 
 
 # Streamlit UI
-st.title("Policy Interpreter")
+st.title("PolicyEngine Computation Tree Explainer")
+st.write(
+    "This app summarizes the computation tree for a PolicyEngine US variable with Claude 3.5 Sonnet."
+)
 
 # Input fields
 age = st.number_input("Your age", min_value=0, max_value=120, value=40)
