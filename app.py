@@ -9,6 +9,9 @@ import matplotlib.pyplot as plt
 client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
 CLAUDE_MODEL = "claude-3-5-sonnet-20240620"
 
+# Maximum computation tree depth.
+MAX_DEPTH = 5
+
 
 def get_explanation(variable, value, computation_log):
     prompt = f"""{anthropic.HUMAN_PROMPT} You are an AI assistant explaining US policy calculations. 
@@ -22,7 +25,7 @@ def get_explanation(variable, value, computation_log):
     3. Mention any key thresholds or rules that affected the calculation.
     4. If relevant, suggest how changes in input might affect this result.
     
-    Keep your explanation concise but informative, suitable for a general audience.
+    Keep your explanation concise but informative, suitable for a general audience. Do not start with phrases like "Certainly!" or "Here's an explanation. It will be rendered as markdown, so preface $ with \.
 
     {anthropic.AI_PROMPT}"""
 
@@ -38,7 +41,7 @@ def get_explanation(variable, value, computation_log):
         return f"Failed to get explanation: {str(e)}"
 
 
-def create_computation_graph(log_lines, max_depth=4):
+def create_computation_graph(log_lines, max_depth=MAX_DEPTH):
     G = nx.DiGraph()
     current_depth = 0
     parent_stack = ["root"]
@@ -161,6 +164,7 @@ if st.button("Calculate and Explain"):
     log = simulation.tracer.computation_log
     log_lines = log.lines(aggregate=False, max_depth=4)
     log_str = "\n".join(log_lines)
+    print(log_str)
 
     # Get explanation from Claude
     explanation = get_explanation(variable, result[0], log_str)
