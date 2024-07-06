@@ -6,7 +6,11 @@ import networkx as nx
 import matplotlib.pyplot as plt
 
 # Set up the Anthropic client
-client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
+client = anthropic.Anthropic(
+    api_key=os.environ.get(
+        "ANTHROPIC_API_KEY", st.secrets["ANTHROPIC_API_KEY"]
+    )
+)
 CLAUDE_MODEL = "claude-3-5-sonnet-20240620"
 
 # Maximum computation tree depth.
