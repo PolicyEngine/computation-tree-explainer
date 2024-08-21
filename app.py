@@ -44,7 +44,6 @@ def get_explanation(variable, value, computation_log):
     except Exception as e:
         return f"Failed to get explanation: {str(e)}"
 
-
 def create_computation_graph(log_lines, max_depth=MAX_DEPTH):
     G = nx.DiGraph()
     current_depth = 0
@@ -75,21 +74,6 @@ def create_computation_graph(log_lines, max_depth=MAX_DEPTH):
 
     return G
 
-
-def plot_computation_graph(G):
-    plt.figure(figsize=(12, 8))
-    pos = nx.spring_layout(G)
-    nx.draw(
-        G,
-        pos,
-        with_labels=True,
-        node_color="lightblue",
-        node_size=3000,
-        font_size=8,
-        font_weight="bold",
-    )
-    plt.title("Computation Graph")
-    return plt
 
 
 # Streamlit UI
@@ -181,12 +165,6 @@ if st.button("Calculate and Explain"):
 
     st.subheader("Explanation")
     st.write(explanation)
-
-    st.subheader("Computation Graph")
-    G = create_computation_graph(log_lines)
-    fig = plot_computation_graph(G)
-    st.pyplot(fig)
-
     st.subheader("Computation Log")
     st.text(log_str)
 
