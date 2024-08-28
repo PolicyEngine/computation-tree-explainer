@@ -44,36 +44,6 @@ def get_explanation(variable, value, computation_log):
     except Exception as e:
         return f"Failed to get explanation: {str(e)}"
 
-def create_computation_graph(log_lines, max_depth=MAX_DEPTH):
-    G = nx.DiGraph()
-    current_depth = 0
-    parent_stack = ["root"]
-
-    for line in log_lines:
-        if line.startswith(" " * (current_depth * 2)):
-            # Same level
-            pass
-        elif line.startswith(" " * ((current_depth + 1) * 2)):
-            # Go deeper
-            if current_depth < max_depth:
-                current_depth += 1
-                parent_stack.append(parent_stack[-1])
-        else:
-            # Go back up
-            while (
-                not line.startswith(" " * (current_depth * 2))
-                and current_depth > 0
-            ):
-                current_depth -= 1
-                parent_stack.pop()
-
-        if current_depth <= max_depth:
-            node_name = line.strip().split("=")[0].strip()
-            G.add_edge(parent_stack[-1], node_name)
-            parent_stack[-1] = node_name
-
-    return G
-
 
 
 # Streamlit UI
