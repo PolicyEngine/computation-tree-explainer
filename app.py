@@ -45,52 +45,6 @@ def get_explanation(variable, value, computation_log):
         return f"Failed to get explanation: {str(e)}"
 
 
-def create_computation_graph(log_lines, max_depth=MAX_DEPTH):
-    G = nx.DiGraph()
-    current_depth = 0
-    parent_stack = ["root"]
-
-    for line in log_lines:
-        if line.startswith(" " * (current_depth * 2)):
-            # Same level
-            pass
-        elif line.startswith(" " * ((current_depth + 1) * 2)):
-            # Go deeper
-            if current_depth < max_depth:
-                current_depth += 1
-                parent_stack.append(parent_stack[-1])
-        else:
-            # Go back up
-            while (
-                not line.startswith(" " * (current_depth * 2))
-                and current_depth > 0
-            ):
-                current_depth -= 1
-                parent_stack.pop()
-
-        if current_depth <= max_depth:
-            node_name = line.strip().split("=")[0].strip()
-            G.add_edge(parent_stack[-1], node_name)
-            parent_stack[-1] = node_name
-
-    return G
-
-
-def plot_computation_graph(G):
-    plt.figure(figsize=(12, 8))
-    pos = nx.spring_layout(G)
-    nx.draw(
-        G,
-        pos,
-        with_labels=True,
-        node_color="lightblue",
-        node_size=3000,
-        font_size=8,
-        font_weight="bold",
-    )
-    plt.title("Computation Graph")
-    return plt
-
 
 # Streamlit UI
 st.title("PolicyEngine Computation Tree Explainer")
@@ -181,12 +135,6 @@ if st.button("Calculate and Explain"):
 
     st.subheader("Explanation")
     st.write(explanation)
-
-    st.subheader("Computation Graph")
-    G = create_computation_graph(log_lines)
-    fig = plot_computation_graph(G)
-    st.pyplot(fig)
-
     st.subheader("Computation Log")
     st.text(log_str)
 
