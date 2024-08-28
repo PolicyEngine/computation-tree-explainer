@@ -60,9 +60,19 @@ DEFAULT_CHILD_AGE = 5
 num_children = st.number_input(
     "Number of children (assumed age 5)", min_value=0, max_value=10, value=2
 )
-state = st.selectbox(
-    "State", ["CA", "NY", "TX", "FL", "IL"]
-)  # Add more states as needed
+# Define US states only
+US_STATES = [
+    "AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "FL", "GA",
+    "HI", "ID", "IL", "IN", "IA", "KS", "KY", "LA", "ME", "MD",
+    "MA", "MI", "MN", "MS", "MO", "MT", "NE", "NV", "NH", "NJ",
+    "NM", "NY", "NC", "ND", "OH", "OK", "OR", "PA", "RI", "SC",
+    "SD", "TN", "TX", "UT", "VT", "VA", "WA", "WV", "WI", "WY",
+    "DC"
+]
+
+# Updated state selection
+state = st.selectbox("State", options=US_STATES)
+
 variable = st.text_input(
     "Variable to analyze (e.g., snap, eitc)", value="snap"
 )
@@ -120,6 +130,8 @@ if st.button("Calculate and Explain"):
     simulation = Simulation(situation=situation)
     simulation.trace = True
     result = simulation.calculate(variable, period)
+    # Explicitly define value
+    value = result[0]
 
     # Get computation log
     log = simulation.tracer.computation_log
@@ -128,10 +140,10 @@ if st.button("Calculate and Explain"):
     print(log_str)
 
     # Get explanation from Claude
-    explanation = get_explanation(variable, result[0], log_str)
+    explanation = get_explanation(variable, value, log_str)
 
     # Display results
-    st.write(f"{variable}: ${result[0]:.2f}")
+    st.write(f"{variable}: ${value:.2f}")
 
     st.subheader("Explanation")
     st.write(explanation)
