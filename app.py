@@ -11,14 +11,14 @@ client = anthropic.Anthropic(
         "ANTHROPIC_API_KEY", st.secrets["ANTHROPIC_API_KEY"]
     )
 )
-CLAUDE_MODEL = "claude-3-5-sonnet-20240620"
+CLAUDE_MODEL = "claude-sonnet-5-5"
 
 # Maximum computation tree depth.
 MAX_DEPTH = 5
 
 
 def get_explanation(variable, value, computation_log):
-    prompt = f"""{anthropic.HUMAN_PROMPT} You are an AI assistant explaining US policy calculations. 
+    prompt = f"""You are an AI assistant explaining US policy calculations.
     The user has run a simulation for the variable '{variable}' and got a result of {value}.
     Here's the computation log:
     {computation_log}
@@ -29,27 +29,38 @@ def get_explanation(variable, value, computation_log):
     3. Mention any key thresholds or rules that affected the calculation.
     4. If relevant, suggest how changes in input might affect this result.
     
-    Keep your explanation concise but informative, suitable for a general audience. Do not start with phrases like "Certainly!" or "Here's an explanation. It will be rendered as markdown, so preface $ with \.
-
-    {anthropic.AI_PROMPT}"""
+    Keep your explanation concise but informative, suitable for a general audience. Do not start with phrases like "Certainly!" or "Here's an explanation. It will be rendered as markdown, so preface $ with \\."""
 
     try:
+        # Thinking tokens count toward max_tokens, so leave headroom beyond
+        # the explanation itself.
         response = client.messages.create(
             model=CLAUDE_MODEL,
-            max_tokens=1000,
-            temperature=0,
+            max_tokens=16000,
+            output_config={"effort": "low"},
             messages=[{"role": "user", "content": prompt}],
         )
-        return response.content[0].text
     except Exception as e:
         return f"Failed to get explanation: {str(e)}"
 
+    if response.stop_reason == "refusal":
+        return "Failed to get explanation: Claude declined this request."
+    # The response can begin with a thinking block, so read text blocks by type.
+    explanation = "".join(
+        block.text for block in response.content if block.type == "text"
+    )
+    if not explanation:
+        return (
+            "Failed to get explanation: the response contained no text "
+            f"(stop reason: {response.stop_reason})."
+        )
+    return explanation
 
 
 # Streamlit UI
 st.title("PolicyEngine Computation Tree Explainer")
 st.write(
-    "This app summarizes the computation tree for a PolicyEngine US variable with Claude 3.5 Sonnet."
+    "This app summarizes the computation tree for a PolicyEngine US variable with Claude Sonnet 5.5."
 )
 
 # Input fields

@@ -1,4 +1,4 @@
-anthropic
+anthropic>=1.9.0,<2
 matplotlib
 networkx
 policyengine-us
