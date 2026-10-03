@@ -141,10 +141,11 @@ class ExplanationTests(unittest.TestCase):
         self.assertEqual(requests[0].url.path, "/v1/messages")
         body = json.loads(requests[0].content)
         self.assertEqual(
-            set(body), {"model", "max_tokens", "output_config", "messages"}
+            set(body), {"model", "max_tokens", "thinking", "output_config", "messages"}
         )
         self.assertEqual(body["model"], "claude-sonnet-5-5")
         self.assertEqual(body["max_tokens"], 16000)
+        self.assertEqual(body["thinking"], {"type": "adaptive"})
         self.assertEqual(body["output_config"], {"effort": "low"})
         self.assertEqual(len(body["messages"]), 1)
         self.assertEqual(body["messages"][0]["role"], "user")

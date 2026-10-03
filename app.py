@@ -37,6 +37,7 @@ def get_explanation(variable, value, computation_log):
         response = client.messages.create(
             model=CLAUDE_MODEL,
             max_tokens=16000,
+            thinking={"type": "adaptive"},
             output_config={"effort": "low"},
             messages=[{"role": "user", "content": prompt}],
         )
